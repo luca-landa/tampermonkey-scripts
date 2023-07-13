@@ -39,10 +39,11 @@ class Time {
 
     toString() {
         const hours = Math.abs(this.hours)
-        let minutes = Math.abs(this.minutes);
-        const hoursString = minutes < 10 ? `0${hours}` : hours.toString();
-        const minutesString = minutes < 10 ? `0${minutes}` : minutes.toString();
+        const minutes = Math.abs(this.minutes);
+        const hoursString = hours.toString().padStart(2, '0');
+        const minutesString = Math.floor(minutes).toString().padStart(2, '0');
         const sign = this.positive ? '+' : '-';
+
         return `${sign}${hoursString}:${minutesString}`;
     }
 }
