@@ -1,65 +1,19 @@
 let sheetData = null;
 
-class Time {
-    constructor(hours, minutes, positive = true) {
-        this.hours = hours || 0;
-        this.minutes = minutes || 0;
-        this.positive = positive;
-    }
+function formatTime(seconds) {
+    const secondsAbs = Math.abs(seconds);
+    const hours = Math.floor(secondsAbs / 3600);
+    const minutes = Math.floor((secondsAbs % 3600) / 60);
+    const hoursString = hours.toString().padStart(2, '0');
+    const minutesString = Math.floor(minutes).toString().padStart(2, '0');
+    const sign = seconds >= 0 ? '+' : '-';
 
-    static parse(timeString) {
-        const [hours, minutes] = timeString.split(':').map(Number);
-        return new Time(hours, minutes);
-    }
-
-    add(otherTime) {
-        const totalMinutes = this.minutes + otherTime.minutes;
-        const carryHours = Math.floor(totalMinutes / 60);
-        const sumHours = this.hours + otherTime.hours + carryHours;
-        const sumMinutes = totalMinutes % 60;
-
-        return new Time(sumHours, sumMinutes);
-    }
-
-    subtract(otherTime) {
-        const thisTotalMinutes = this.hours * 60 + this.minutes;
-        const otherTotalMinutes = otherTime.hours * 60 + otherTime.minutes;
-        const highestTime = Math.max(thisTotalMinutes, otherTotalMinutes);
-        const lowestTime = Math.min(thisTotalMinutes, otherTotalMinutes);
-        const totalMinutes = highestTime - lowestTime;
-        let subtractHours = Math.floor(totalMinutes / 60);
-        let subtractMinutes = Math.abs(totalMinutes % 60);
-
-        return new Time(subtractHours, subtractMinutes, thisTotalMinutes === highestTime);
-    }
-
-    isZero() {
-        return this.hours === 0 && this.minutes === 0;
-    }
-
-    toString() {
-        const hours = Math.abs(this.hours)
-        const minutes = Math.abs(this.minutes);
-        const hoursString = hours.toString().padStart(2, '0');
-        const minutesString = Math.floor(minutes).toString().padStart(2, '0');
-        const sign = this.positive ? '+' : '-';
-
-        return `${sign}${hoursString}:${minutesString}`;
-    }
-}
-
-function getBValueLabel(innerText) {
-   const infoContainers = Array.from(document.querySelectorAll('b-label-value'))
-   return infoContainers.find((el) => {
-       return el.innerHTML.toLowerCase().includes(innerText);
-   });
+    return `${sign}${hoursString}:${minutesString}`;
 }
 
 function getDaysWorked() {
-    const daysWorkedString = getBValueLabel('days worked').querySelector('h6').innerText;
-
-    const daysWorked = parseInt(daysWorkedString);
-    if (getTodayWorkedTime().isZero()) {
+    const daysWorked = sheetData.summary.actualDaysWorked;
+    if (getTodayWorkedSeconds() === 0) {
         return daysWorked;
     } else {
         return daysWorked - 1;
@@ -70,30 +24,34 @@ function getWeekDaysWorked() {
   const weekendDaysWorked = sheetData
     .attendance
     .filter(({ exceptions }) => exceptions.workedOnNonWorkingDay)
-    .length
+    .length;
 
   return getDaysWorked() - weekendDaysWorked;
 }
 
-function getTotalWorkedTime() {
-    const hoursWorkedString = getBValueLabel('hours worked').querySelector('h6').innerText;
-
-    return Time.parse(hoursWorkedString);
+function getTotalWorkedSeconds() {
+    return sheetData.attendance
+        .map((a) => a.totalAttendanceSeconds)
+        .reduce((s1, s2) => s1 + s2)
 }
 
-function getTodayWorkedTime() {
-    const hoursWorkedContainers = Array.from(document.querySelectorAll('[col-id="totalHoursDisplay"]'));
-    const hoursWorkedTodayString = hoursWorkedContainers[1].innerText;
+function getTodayWorkedSeconds() {
+    const lastAttendanceDay = sheetData.attendance[0];
+    if (!isToday(lastAttendanceDay.date)) return 0;
 
-    return Time.parse(hoursWorkedTodayString);
+    return lastAttendanceDay.totalAttendanceSeconds;
 }
 
-function getTotalWorkedTimeUntilYesterday() {
-    return getTotalWorkedTime().subtract(getTodayWorkedTime());
+function isToday(dateString) {
+    return new Date().toDateString() === new Date(dateString).toDateString();
 }
 
-function getOvertime() {
-    return getTotalWorkedTimeUntilYesterday().subtract(new Time(getWeekDaysWorked() * 8, 0));
+function getTotalWorkedSecondsUntilYesterday() {
+    return getTotalWorkedSeconds() - getTodayWorkedSeconds();
+}
+
+function getOvertimeSeconds() {
+    return getTotalWorkedSecondsUntilYesterday() - getWeekDaysWorked() * 8 * 3600;
 }
 
 function deletePreviousOvertime() {
@@ -103,24 +61,31 @@ function deletePreviousOvertime() {
 function appendOvertime() {
     deletePreviousOvertime();
     const summaryContainer = document.querySelector('b-summary-insights');
-    const overtime = summaryContainer.querySelector('b-label-value:last-child').cloneNode(true);
+    const overtimeNode = summaryContainer.querySelector('b-label-value:last-child').cloneNode(true);
 
-    overtime.id = 'overtime';
-    overtime.querySelector('h6 span').innerHTML = getOvertime().toString();
-    overtime.querySelector('p span').innerHTML = 'Overtime';
-    summaryContainer.appendChild(overtime);
+    overtimeNode.id = 'overtime';
+    overtimeNode.querySelector('h6 span').innerHTML = formatTime(getOvertimeSeconds());
+    overtimeNode.querySelector('p span').innerHTML = 'Overtime';
+    summaryContainer.appendChild(overtimeNode);
 }
 
 function waitForPageRender() {
     let resolvePromise;
     const promise = new Promise(resolve => { resolvePromise = resolve });
     const interval = setInterval(() => {
-        if (getBValueLabel('hours worked') && sheetData !== null) {
+        if (didUILoad() && sheetData !== null) {
             resolvePromise();
             clearInterval(interval);
         }
     }, 1000);
     return promise;
+}
+
+function didUILoad() {
+   const infoContainers = Array.from(document.querySelectorAll('b-label-value'))
+   return infoContainers.find((el) => {
+       return el.innerHTML.toLowerCase().includes('hours worked');
+   });
 }
 
 function fetchSheetData() {
