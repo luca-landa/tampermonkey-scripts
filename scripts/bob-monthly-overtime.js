@@ -1,6 +1,6 @@
 let sheetData = null;
 
-function formatTime(seconds) {
+function formatTime(seconds, useSign = true) {
     const secondsAbs = Math.abs(seconds);
     const hours = Math.floor(secondsAbs / 3600);
     const minutes = Math.floor((secondsAbs % 3600) / 60);
@@ -8,7 +8,7 @@ function formatTime(seconds) {
     const minutesString = Math.floor(minutes).toString().padStart(2, '0');
     const sign = seconds >= 0 ? '+' : '-';
 
-    return `${sign}${hoursString}:${minutesString}`;
+    return `${useSign ? sign : ''}${hoursString}:${minutesString}`;
 }
 
 function getDaysWorked() {
@@ -54,19 +54,42 @@ function getOvertimeSeconds() {
     return getTotalWorkedSecondsUntilYesterday() - getWeekDaysWorked() * 8 * 3600;
 }
 
-function deletePreviousOvertime() {
-    document.getElementById('overtime')?.remove();
+function getClockoutTime() {
+    const todayWorkedSeconds = getTodayWorkedSeconds();
+    if (todayWorkedSeconds === 0) return null;
+
+    const lastEntrance = sheetData.attendance[0].entries.find((entry) => entry.end == null);
+    if (!lastEntrance) return null;
+
+    const lastEntranceStartDate = new Date(lastEntrance.start);
+    const lastEntranceStartSeconds = lastEntranceStartDate.getSeconds() + lastEntranceStartDate.getMinutes() * 60 + lastEntranceStartDate.getHours() * 3600;
+    
+    const remainingSeconds = (8 * 3600) - getTodayWorkedSeconds();
+    const exitTimeSeconds = lastEntranceStartSeconds + remainingSeconds;
+
+    return formatTime(exitTimeSeconds, false);
+}
+
+function createSummaryNode(id, title, body) {
+    document.getElementById(id)?.remove();
+    const summaryContainer = document.querySelector('b-summary-insights');
+    const node = summaryContainer.querySelector('b-label-value:last-child').cloneNode(true);
+
+    node.id = 'overtime';
+    node.querySelector('h6 span').innerHTML = body;
+    node.querySelector('p span').innerHTML = title;
+    summaryContainer.appendChild(node);
 }
 
 function appendOvertime() {
-    deletePreviousOvertime();
-    const summaryContainer = document.querySelector('b-summary-insights');
-    const overtimeNode = summaryContainer.querySelector('b-label-value:last-child').cloneNode(true);
+    createSummaryNode('overtime', 'Overtime', formatTime(getOvertimeSeconds()));
+}
 
-    overtimeNode.id = 'overtime';
-    overtimeNode.querySelector('h6 span').innerHTML = formatTime(getOvertimeSeconds());
-    overtimeNode.querySelector('p span').innerHTML = 'Overtime';
-    summaryContainer.appendChild(overtimeNode);
+function appendClockoutTime() {
+    const clockoutTime = getClockoutTime();
+    if (clockoutTime) {
+        createSummaryNode('clockout_time', 'Clockout at', getClockoutTime());
+    }
 }
 
 function waitForPageRender() {
@@ -96,6 +119,7 @@ function fetchSheetData() {
 
 function run() {
     appendOvertime();
+    appendClockoutTime();
 }
 
 (function() {
