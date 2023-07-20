@@ -12,12 +12,12 @@ function formatTime(seconds, useSign = true) {
 }
 
 function getDaysWorked() {
-    const daysWorked = sheetData.summary.actualDaysWorked;
-    if (getTodayWorkedSeconds() === 0) {
-        return daysWorked;
-    } else {
-        return daysWorked - 1;
+    let daysWorked = sheetData.summary.actualDaysWorked;
+    if (getTodayWorkedSeconds() > 0) {
+        daysWorked -=1;
     }
+
+    return daysWorked;
 }
 
 function getWeekDaysWorked() {
@@ -51,7 +51,9 @@ function getTotalWorkedSecondsUntilYesterday() {
 }
 
 function getOvertimeSeconds() {
-    return getTotalWorkedSecondsUntilYesterday() - getWeekDaysWorked() * 8 * 3600;
+    const targetWorkedDays = getWeekDaysWorked() + sheetData.summary.missingEntries;
+
+    return getTotalWorkedSecondsUntilYesterday() - targetWorkedDays * 8 * 3600;
 }
 
 function getClockoutTime() {
@@ -63,7 +65,7 @@ function getClockoutTime() {
 
     const lastEntranceStartDate = new Date(lastEntrance.start);
     const lastEntranceStartSeconds = lastEntranceStartDate.getSeconds() + lastEntranceStartDate.getMinutes() * 60 + lastEntranceStartDate.getHours() * 3600;
-    
+
     const remainingSeconds = (8 * 3600) - getTodayWorkedSeconds();
     const exitTimeSeconds = lastEntranceStartSeconds + remainingSeconds;
 
