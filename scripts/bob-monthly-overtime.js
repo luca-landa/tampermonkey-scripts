@@ -1,23 +1,23 @@
 let sheetData = null;
 
 function formatTime(seconds, useSign = true) {
-    const secondsAbs = Math.abs(seconds);
-    const hours = Math.floor(secondsAbs / 3600);
-    const minutes = Math.floor((secondsAbs % 3600) / 60);
-    const hoursString = hours.toString().padStart(2, '0');
-    const minutesString = Math.floor(minutes).toString().padStart(2, '0');
-    const sign = seconds >= 0 ? '+' : '-';
+  const secondsAbs = Math.abs(seconds);
+  const hours = Math.floor(secondsAbs / 3600);
+  const minutes = Math.floor((secondsAbs % 3600) / 60);
+  const hoursString = hours.toString().padStart(2, '0');
+  const minutesString = Math.floor(minutes).toString().padStart(2, '0');
+  const sign = seconds >= 0 ? '+' : '-';
 
-    return `${useSign ? sign : ''}${hoursString}:${minutesString}`;
+  return `${useSign ? sign : ''}${hoursString}:${minutesString}`;
 }
 
 function getDaysWorked() {
-    let daysWorked = sheetData.summary.actualDaysWorked;
-    if (getTodayWorkedSeconds() > 0) {
-        daysWorked -=1;
-    }
+  let daysWorked = sheetData.summary.actualDaysWorked;
+  if (getTodayWorkedSeconds() > 0) {
+    daysWorked -= 1;
+  }
 
-    return daysWorked;
+  return daysWorked;
 }
 
 function getWeekDaysWorked() {
@@ -30,87 +30,87 @@ function getWeekDaysWorked() {
 }
 
 function getTotalWorkedSeconds() {
-    return sheetData.attendance
-        .map((a) => a.totalAttendanceSeconds)
-        .reduce((s1, s2) => s1 + s2)
+  return sheetData.attendance
+    .map((a) => a.totalAttendanceSeconds)
+    .reduce((s1, s2) => s1 + s2)
 }
 
 function getTodayWorkedSeconds() {
-    const lastAttendanceDay = sheetData.attendance[0];
-    if (!isToday(lastAttendanceDay.date)) return 0;
+  const lastAttendanceDay = sheetData.attendance[0];
+  if (!isToday(lastAttendanceDay.date)) return 0;
 
-    return lastAttendanceDay.totalAttendanceSeconds;
+  return lastAttendanceDay.totalAttendanceSeconds;
 }
 
 function isToday(dateString) {
-    return new Date().toDateString() === new Date(dateString).toDateString();
+  return new Date().toDateString() === new Date(dateString).toDateString();
 }
 
 function getTotalWorkedSecondsUntilYesterday() {
-    return getTotalWorkedSeconds() - getTodayWorkedSeconds();
+  return getTotalWorkedSeconds() - getTodayWorkedSeconds();
 }
 
 function getOvertimeSeconds() {
-    const targetWorkedDays = getWeekDaysWorked() + sheetData.summary.missingEntries;
+  const targetWorkedDays = getWeekDaysWorked() + sheetData.summary.missingEntries;
 
-    return getTotalWorkedSecondsUntilYesterday() - targetWorkedDays * 8 * 3600;
+  return getTotalWorkedSecondsUntilYesterday() - targetWorkedDays * 8 * 3600;
 }
 
 function getClockoutTime() {
-    const todayWorkedSeconds = getTodayWorkedSeconds();
-    if (todayWorkedSeconds === 0) return null;
+  const todayWorkedSeconds = getTodayWorkedSeconds();
+  if (todayWorkedSeconds === 0) return null;
 
-    const lastEntrance = sheetData.attendance[0].entries.find((entry) => entry.end == null);
-    if (!lastEntrance) return null;
+  const lastEntrance = sheetData.attendance[0].entries.find((entry) => entry.end == null);
+  if (!lastEntrance) return null;
 
-    const lastEntranceStartDate = new Date(lastEntrance.start);
-    const lastEntranceStartSeconds = lastEntranceStartDate.getSeconds() + lastEntranceStartDate.getMinutes() * 60 + lastEntranceStartDate.getHours() * 3600;
+  const lastEntranceStartDate = new Date(lastEntrance.start);
+  const lastEntranceStartSeconds = lastEntranceStartDate.getSeconds() + lastEntranceStartDate.getMinutes() * 60 + lastEntranceStartDate.getHours() * 3600;
 
-    const remainingSeconds = (8 * 3600) - getTodayWorkedSeconds();
-    const exitTimeSeconds = lastEntranceStartSeconds + remainingSeconds;
+  const remainingSeconds = (8 * 3600) - getTodayWorkedSeconds();
+  const exitTimeSeconds = lastEntranceStartSeconds + remainingSeconds;
 
-    return formatTime(exitTimeSeconds, false);
+  return formatTime(exitTimeSeconds, false);
 }
 
 function createSummaryNode(id, title, body) {
-    document.getElementById(id)?.remove();
-    const summaryContainer = document.querySelector('b-summary-insights');
-    const node = summaryContainer.querySelector('b-label-value:last-child').cloneNode(true);
+  document.getElementById(id)?.remove();
+  const summaryContainer = document.querySelector('b-summary-insights');
+  const node = summaryContainer.querySelector('b-label-value:last-child').cloneNode(true);
 
-    node.id = 'overtime';
-    node.querySelector('h6 span').innerHTML = body;
-    node.querySelector('p span').innerHTML = title;
-    summaryContainer.appendChild(node);
+  node.id = 'overtime';
+  node.querySelector('h6 span').innerHTML = body;
+  node.querySelector('p span').innerHTML = title;
+  summaryContainer.appendChild(node);
 }
 
 function appendOvertime() {
-    createSummaryNode('overtime', 'Overtime', formatTime(getOvertimeSeconds()));
+  createSummaryNode('overtime', 'Overtime', formatTime(getOvertimeSeconds()));
 }
 
 function appendClockoutTime() {
-    const clockoutTime = getClockoutTime();
-    if (clockoutTime) {
-        createSummaryNode('clockout_time', 'Clockout at', getClockoutTime());
-    }
+  const clockoutTime = getClockoutTime();
+  if (clockoutTime) {
+    createSummaryNode('clockout_time', 'Clockout at', getClockoutTime());
+  }
 }
 
 function waitForPageRender() {
-    let resolvePromise;
-    const promise = new Promise(resolve => { resolvePromise = resolve });
-    const interval = setInterval(() => {
-        if (didUILoad() && sheetData !== null) {
-            resolvePromise();
-            clearInterval(interval);
-        }
-    }, 1000);
-    return promise;
+  let resolvePromise;
+  const promise = new Promise(resolve => { resolvePromise = resolve });
+  const interval = setInterval(() => {
+    if (didUILoad() && sheetData !== null) {
+      resolvePromise();
+      clearInterval(interval);
+    }
+  }, 1000);
+  return promise;
 }
 
 function didUILoad() {
-   const infoContainers = Array.from(document.querySelectorAll('b-label-value'))
-   return infoContainers.find((el) => {
-       return el.innerHTML.toLowerCase().includes('hours worked');
-   });
+  const infoContainers = Array.from(document.querySelectorAll('b-label-value'))
+  return infoContainers.find((el) => {
+    return el.innerHTML.toLowerCase().includes('hours worked');
+  });
 }
 
 function fetchSheetData() {
@@ -120,13 +120,13 @@ function fetchSheetData() {
 }
 
 function run() {
-    appendOvertime();
-    appendClockoutTime();
+  appendOvertime();
+  appendClockoutTime();
 }
 
 (function() {
-    'use strict';
+  'use strict';
 
-    fetchSheetData();
-    waitForPageRender().then(run);
+  fetchSheetData();
+  waitForPageRender().then(run);
 })();
