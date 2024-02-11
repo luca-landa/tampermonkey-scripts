@@ -20,10 +20,11 @@ function getDaysWorked() {
   return daysWorked;
 }
 
-function getWeekDaysWorked() {
+function getWeekDaysWorkedUntilYesterday() {
   const weekendDaysWorked = sheetData
     .attendance
     .filter(({ exceptions }) => exceptions.workedOnNonWorkingDay)
+    .filter(({ date }) => !isToday(date))
     .length;
 
   return getDaysWorked() - weekendDaysWorked;
@@ -51,7 +52,7 @@ function getTotalWorkedSecondsUntilYesterday() {
 }
 
 function getOvertimeSeconds() {
-  const targetWorkedDays = getWeekDaysWorked() + sheetData.summary.missingEntries;
+  const targetWorkedDays = getWeekDaysWorkedUntilYesterday() + sheetData.summary.missingEntries;
 
   return getTotalWorkedSecondsUntilYesterday() - targetWorkedDays * 8 * 3600;
 }
