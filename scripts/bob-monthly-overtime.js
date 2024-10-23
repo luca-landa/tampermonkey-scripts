@@ -1,5 +1,7 @@
 let sheetData = null;
 
+const HOURS_IN_DAY = 8;
+
 function formatTime(seconds, useSign = true) {
   const secondsAbs = Math.abs(seconds);
   const hours = Math.floor(secondsAbs / 3600);
@@ -54,7 +56,7 @@ function getTotalWorkedSecondsUntilYesterday() {
 function getOvertimeSeconds() {
   const targetWorkedDays = getWeekDaysWorkedUntilYesterday() + sheetData.summary.missingEntries;
 
-  return getTotalWorkedSecondsUntilYesterday() - targetWorkedDays * 8 * 3600;
+  return getTotalWorkedSecondsUntilYesterday() - targetWorkedDays * HOURS_IN_DAY * 3600;
 }
 
 function getClockoutTime() {
@@ -67,7 +69,7 @@ function getClockoutTime() {
   const lastEntranceStartDate = new Date(lastEntrance.start);
   const lastEntranceStartSeconds = lastEntranceStartDate.getSeconds() + lastEntranceStartDate.getMinutes() * 60 + lastEntranceStartDate.getHours() * 3600;
 
-  const remainingSeconds = (8 * 3600) - getTodayWorkedSeconds();
+  const remainingSeconds = (HOURS_IN_DAY * 3600) - getTodayWorkedSeconds();
   const exitTimeSeconds = lastEntranceStartSeconds + remainingSeconds;
 
   return formatTime(exitTimeSeconds, false);
