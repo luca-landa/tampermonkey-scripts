@@ -1,3 +1,25 @@
+// ==UserScript==
+// @name         Bob overtime
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  try to take over the world!
+// @author       You
+// @match        https://app.hibob.com/attendance/my-attendance
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=hibob.com
+// @grant        none
+// ==/UserScript==
+
+// ==UserScript==
+// @name         Bob overtime
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  try to take over the world!
+// @author       You
+// @match        https://app.hibob.com/attendance/my-attendance
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=hibob.com
+// @grant        none
+// ==/UserScript==
+
 let sheetData = null;
 
 const HOURS_IN_DAY = 8;
@@ -77,13 +99,24 @@ function getClockoutTime() {
 
 function createSummaryNode(id, title, body) {
   document.getElementById(id)?.remove();
-  const summaryContainer = document.querySelector('b-summary-insights');
-  const node = summaryContainer.querySelector('b-label-value:last-child').cloneNode(true);
+  const summaryContainer = document.querySelector('b-progress-bar').parentElement;
+  const node = createHtmlNode(id, title, body);
 
-  node.id = 'overtime';
-  node.querySelector('h6 span').innerHTML = body;
-  node.querySelector('p span').innerHTML = title;
   summaryContainer.appendChild(node);
+}
+
+function createHtmlNode(id, titleText, bodyText) {
+  const container = document.createElement("div");
+  const title = document.createElement("h4");
+  const body = document.createElement("p");
+  container.id = id;
+  container.style = 'margin-left: 24px; margin-right: 24px;'
+  title.textContent = titleText;
+  body.textContent = bodyText;
+  container.appendChild(title);
+  container.appendChild(body);
+
+  return container;
 }
 
 function appendOvertime() {
@@ -110,9 +143,9 @@ function waitForPageRender() {
 }
 
 function didUILoad() {
-  const infoContainers = Array.from(document.querySelectorAll('b-label-value'))
+  const infoContainers = Array.from(document.querySelectorAll('b-progress-bar'));
   return infoContainers.find((el) => {
-    return el.innerHTML.toLowerCase().includes('hours worked');
+    return el.parentElement.innerHTML.toLowerCase().includes('potential hours');
   });
 }
 
